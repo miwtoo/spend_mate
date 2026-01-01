@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:spend_mate/data/services/ai/ai_chat_client.dart';
@@ -29,15 +31,34 @@ class GeminiChatClient implements AiChatClient {
       'contents': messages.map(_toGeminiContent).toList(growable: false),
     };
 
-    final response = await _httpClient
-        .post(
-          endpoint,
-          headers: const {
-            'content-type': 'application/json',
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 45));
+    late final http.Response response;
+    try {
+      response = await _httpClient
+          .post(
+            endpoint,
+            headers: const {
+              'content-type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 45));
+    } on SocketException catch (e) {
+      throw Exception(
+        'Network error calling ${endpoint.toString()}: ${e.message}. '
+        'Check your internet connection/DNS and verify the Base URL. '
+        'On Android release builds, ensure android.permission.INTERNET is declared.',
+      );
+    } on http.ClientException catch (e) {
+      throw Exception(
+        'Network error calling ${endpoint.toString()}: ${e.message}. '
+        'Check your internet connection/DNS and verify the Base URL.',
+      );
+    } on TimeoutException {
+      throw Exception(
+        'Request timed out calling ${endpoint.toString()}. '
+        'Check your connection and try again.',
+      );
+    }
 
     final Map<String, dynamic> json;
     try {
@@ -103,5 +124,3 @@ class GeminiChatClient implements AiChatClient {
     };
   }
 }
-
-

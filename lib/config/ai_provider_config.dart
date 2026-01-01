@@ -36,10 +36,17 @@ class AiProviderConfig {
     );
   }
 
-  /// Returns a user-friendly error string if configuration is incomplete.
   String? validateForChat() {
     if (baseUrl.trim().isEmpty) {
       return 'AI Base URL is required.';
+    }
+
+    final parsed = Uri.tryParse(baseUrl.trim());
+    if (parsed == null || !parsed.hasScheme || parsed.host.trim().isEmpty) {
+      return 'AI Base URL must be a valid URL (e.g. https://api.openai.com).';
+    }
+    if (parsed.scheme != 'http' && parsed.scheme != 'https') {
+      return 'AI Base URL must start with http:// or https://.';
     }
 
     if (provider == AiProvider.openAiCompatible) {
@@ -63,5 +70,3 @@ class AiProviderConfig {
     return null;
   }
 }
-
-

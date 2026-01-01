@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:spend_mate/data/services/ai/ai_chat_client.dart';
@@ -27,16 +29,35 @@ class OpenAiCompatibleChatClient implements AiChatClient {
       'messages': messages.map(_toOpenAiMessage).toList(growable: false),
     };
 
-    final response = await _httpClient
-        .post(
-          endpoint,
-          headers: {
-            'content-type': 'application/json',
-            if (apiKey.trim().isNotEmpty) 'authorization': 'Bearer $apiKey',
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 45));
+    late final http.Response response;
+    try {
+      response = await _httpClient
+          .post(
+            endpoint,
+            headers: {
+              'content-type': 'application/json',
+              if (apiKey.trim().isNotEmpty) 'authorization': 'Bearer $apiKey',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 45));
+    } on SocketException catch (e) {
+      throw Exception(
+        'Network error calling ${endpoint.toString()}: ${e.message}. '
+        'Check your internet connection/DNS and verify the Base URL. '
+        'On Android release builds, ensure android.permission.INTERNET is declared.',
+      );
+    } on http.ClientException catch (e) {
+      throw Exception(
+        'Network error calling ${endpoint.toString()}: ${e.message}. '
+        'Check your internet connection/DNS and verify the Base URL.',
+      );
+    } on TimeoutException {
+      throw Exception(
+        'Request timed out calling ${endpoint.toString()}. '
+        'Check your connection and try again.',
+      );
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final Map<String, dynamic>? json = _tryDecodeJsonObject(response.body);
@@ -103,9 +124,8 @@ class OpenAiCompatibleChatClient implements AiChatClient {
     final looksLikeVersion =
         RegExp(r'^v\d+$', caseSensitive: false).hasMatch(last);
 
-    final relativePath = looksLikeVersion
-        ? 'chat/completions'
-        : 'v1/chat/completions';
+    final relativePath =
+        looksLikeVersion ? 'chat/completions' : 'v1/chat/completions';
 
     // Uri.resolve() treats a base path without a trailing slash as a "file" and
     // will replace the last segment. We want to append, so force a directory.
@@ -140,5 +160,3 @@ class OpenAiCompatibleChatClient implements AiChatClient {
     return '${trimmed.substring(0, maxChars)}…';
   }
 }
-
-
