@@ -31,6 +31,12 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Android local config / release signing (do not commit secrets or machine paths)
+/android/local.properties
+/android/key.properties
+**/*.jks
+**/*.keystore
+
 # Symbolication related
 app.*.symbols
 
