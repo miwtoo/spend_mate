@@ -1,6 +1,6 @@
 plugins {
     id "com.android.application"
-    id "org.jetbrains.kotlin.android"
+    id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -12,10 +12,14 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+// Load signing keys from `android/key.properties` (not committed to git).
+// Uses Groovy's `withInputStream` to avoid leaking file handles.
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    keystorePropertiesFile.withInputStream { stream ->
+        keystoreProperties.load(stream)
+    }
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
@@ -35,7 +39,6 @@ android {
 
     signingConfigs {
         release {
-            // Load signing keys from `android/key.properties` (not committed to git).
             // If the file does not exist, release builds will fall back to debug signing.
             if (keystorePropertiesFile.exists()) {
                 keyAlias keystoreProperties['keyAlias']
@@ -47,12 +50,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = '1.8'
     }
 
     sourceSets {
