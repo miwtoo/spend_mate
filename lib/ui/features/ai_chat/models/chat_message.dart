@@ -1,3 +1,5 @@
+import 'package:spend_mate/ui/features/ai_chat/models/chat_attachment.dart';
+
 enum ChatRole {
   system,
   user,
@@ -27,12 +29,14 @@ class ChatMessage {
   ChatMessage({
     required this.role,
     required this.text,
+    List<ChatAttachment>? attachments,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : attachments = List.unmodifiable(attachments ?? const []),
+        createdAt = createdAt ?? DateTime.now();
 
   final ChatRole role;
   final String text;
+  final List<ChatAttachment> attachments;
   final DateTime createdAt;
 }
-
 

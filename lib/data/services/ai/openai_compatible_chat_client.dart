@@ -138,9 +138,44 @@ class OpenAiCompatibleChatClient implements AiChatClient {
   }
 
   Map<String, dynamic> _toOpenAiMessage(ChatMessage message) {
+    if (message.attachments.isEmpty) {
+      return <String, dynamic>{
+        'role': message.role.openAiRole,
+        'content': message.text,
+      };
+    }
+
+    final parts = <Map<String, dynamic>>[];
+    final text = message.text.trim();
+    if (text.isNotEmpty) {
+      parts.add({
+        'type': 'text',
+        'text': text,
+      });
+    }
+
+    for (final attachment in message.attachments) {
+      if (attachment.isImage) {
+        parts.add({
+          'type': 'image_url',
+          'image_url': {
+            'url':
+                'data:${attachment.mimeType};base64,${attachment.toBase64()}',
+          },
+        });
+      } else {
+        parts.add({
+          'type': 'text',
+          'text':
+              'Attached file: ${attachment.name} (${attachment.mimeType}, ${attachment.sizeLabel}). '
+                  'File content not sent for this provider.',
+        });
+      }
+    }
+
     return <String, dynamic>{
       'role': message.role.openAiRole,
-      'content': message.text,
+      'content': parts,
     };
   }
 

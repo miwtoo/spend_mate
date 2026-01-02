@@ -116,11 +116,27 @@ class GeminiChatClient implements AiChatClient {
   }
 
   Map<String, dynamic> _toGeminiContent(ChatMessage message) {
+    final parts = <Map<String, dynamic>>[];
+    final text = message.text.trim();
+    if (text.isNotEmpty) {
+      parts.add({'text': text});
+    }
+    for (final attachment in message.attachments) {
+      parts.add({
+        'inline_data': {
+          'mime_type': attachment.mimeType,
+          'data': attachment.toBase64(),
+        },
+      });
+    }
+
+    if (parts.isEmpty) {
+      parts.add({'text': ''});
+    }
+
     return <String, dynamic>{
       'role': message.role.geminiRole,
-      'parts': [
-        {'text': message.text},
-      ],
+      'parts': parts,
     };
   }
 }
