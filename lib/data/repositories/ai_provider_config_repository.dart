@@ -11,6 +11,7 @@ class AiProviderConfigRepository {
   static const _kBaseUrl = 'ai_base_url';
   static const _kApiKey = 'ai_api_key';
   static const _kModel = 'ai_model';
+  static const _kVisionModel = 'ai_vision_model';
 
   static Future<AiProviderConfigRepository> create() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,6 +28,8 @@ class AiProviderConfigRepository {
       baseUrl: _prefs.getString(_kBaseUrl) ?? _defaultBaseUrlFor(provider),
       apiKey: _prefs.getString(_kApiKey) ?? defaults.apiKey,
       model: _prefs.getString(_kModel) ?? _defaultModelFor(provider),
+      visionModel:
+          _prefs.getString(_kVisionModel) ?? _defaultVisionModelFor(provider),
     );
   }
 
@@ -35,9 +38,17 @@ class AiProviderConfigRepository {
     await _prefs.setString(_kBaseUrl, config.baseUrl);
     await _prefs.setString(_kApiKey, config.apiKey);
     await _prefs.setString(_kModel, config.model);
+    await _prefs.setString(_kVisionModel, config.visionModel);
   }
 
   String _defaultModelFor(AiProvider provider) {
+    return switch (provider) {
+      AiProvider.openAiCompatible => 'gpt-4o-mini',
+      AiProvider.gemini => 'gemini-1.5-flash',
+    };
+  }
+
+  String _defaultVisionModelFor(AiProvider provider) {
     return switch (provider) {
       AiProvider.openAiCompatible => 'gpt-4o-mini',
       AiProvider.gemini => 'gemini-1.5-flash',
@@ -51,5 +62,4 @@ class AiProviderConfigRepository {
     };
   }
 }
-
 

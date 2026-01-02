@@ -6,12 +6,14 @@ class AiProviderConfig {
     required this.baseUrl,
     required this.apiKey,
     required this.model,
+    required this.visionModel,
   });
 
   final AiProvider provider;
   final String baseUrl;
   final String apiKey;
   final String model;
+  final String visionModel;
 
   factory AiProviderConfig.defaults() {
     return const AiProviderConfig(
@@ -19,6 +21,7 @@ class AiProviderConfig {
       baseUrl: 'https://api.openai.com',
       apiKey: '',
       model: 'gpt-4o-mini',
+      visionModel: 'gpt-4o-mini',
     );
   }
 
@@ -27,12 +30,14 @@ class AiProviderConfig {
     String? baseUrl,
     String? apiKey,
     String? model,
+    String? visionModel,
   }) {
     return AiProviderConfig(
       provider: provider ?? this.provider,
       baseUrl: baseUrl ?? this.baseUrl,
       apiKey: apiKey ?? this.apiKey,
       model: model ?? this.model,
+      visionModel: visionModel ?? this.visionModel,
     );
   }
 

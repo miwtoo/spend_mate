@@ -20,6 +20,7 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
   final _baseUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
   final _modelController = TextEditingController();
+  final _visionModelController = TextEditingController();
   AiProvider _provider = AiProvider.openAiCompatible;
   bool _obscureApiKey = true;
   bool _saving = false;
@@ -36,6 +37,7 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
     _baseUrlController.dispose();
     _apiKeyController.dispose();
     _modelController.dispose();
+    _visionModelController.dispose();
     super.dispose();
   }
 
@@ -45,6 +47,7 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
     _baseUrlController.text = config.baseUrl;
     _apiKeyController.text = config.apiKey;
     _modelController.text = config.model;
+    _visionModelController.text = config.visionModel;
   }
 
   AiProviderConfig _buildConfig() {
@@ -53,6 +56,7 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
       baseUrl: _baseUrlController.text.trim(),
       apiKey: _apiKeyController.text.trim(),
       model: _modelController.text.trim(),
+      visionModel: _visionModelController.text.trim(),
     );
   }
 
@@ -75,6 +79,9 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
       if (_modelController.text.trim().isEmpty) {
         _modelController.text = 'gemini-1.5-flash';
       }
+      if (_visionModelController.text.trim().isEmpty) {
+        _visionModelController.text = 'gemini-1.5-flash';
+      }
       return;
     }
 
@@ -84,6 +91,9 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
     }
     if (_modelController.text.trim().isEmpty) {
       _modelController.text = 'gpt-4o-mini';
+    }
+    if (_visionModelController.text.trim().isEmpty) {
+      _visionModelController.text = 'gpt-4o-mini';
     }
   }
 
@@ -150,6 +160,16 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
               ),
               const SizedBox(height: 14),
               TextFormField(
+                controller: _visionModelController,
+                enabled: !_saving,
+                decoration: const InputDecoration(
+                  labelText: 'Vision model (for attachments)',
+                  hintText: 'e.g. glm-4.6v / gpt-4o-mini / gemini-1.5-flash',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
                 controller: _apiKeyController,
                 enabled: !_saving,
                 obscureText: _obscureApiKey,
@@ -191,5 +211,4 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
     );
   }
 }
-
 

@@ -135,10 +135,14 @@ class AiChatViewModel extends ChangeNotifier {
         config: config,
         httpClient: _httpClient,
       );
+      final model = attachments.isNotEmpty &&
+              config.visionModel.trim().isNotEmpty
+          ? config.visionModel
+          : config.model;
 
       final reply = await client.sendChat(
         messages: _messages,
-        model: config.model,
+        model: model,
       );
 
       _messages.add(ChatMessage(role: ChatRole.assistant, text: reply));
