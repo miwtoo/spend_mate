@@ -17,6 +17,7 @@ void main() {
     expect(config.baseUrl, 'https://api.openai.com');
     expect(config.apiKey, '');
     expect(config.model, 'gpt-4o-mini');
+    expect(config.visionModel, 'gpt-4o-mini');
   });
 
   test('saves and reloads config', () async {
@@ -27,6 +28,7 @@ void main() {
       baseUrl: 'https://generativelanguage.googleapis.com',
       apiKey: 'abc123',
       model: 'gemini-1.5-flash',
+      visionModel: 'gemini-1.5-flash',
     );
 
     await repo.save(config);
@@ -36,7 +38,7 @@ void main() {
     expect(loaded.baseUrl, config.baseUrl);
     expect(loaded.apiKey, config.apiKey);
     expect(loaded.model, config.model);
+    expect(loaded.visionModel, config.visionModel);
   });
 }
-
 
