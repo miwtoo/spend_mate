@@ -1,8 +1,11 @@
 # AGENTS.md
 
 ## Project Context
-`spend_mate` is an AI-Powered Mobile Client for **Firefly III**. 
+`spend_mate` is an AI-Powered Mobile Client for **Firefly III**.
 It acts as a "Smart Remote" for personal finance, shifting from manual data entry to **Intent-Based Tracking** using OCR and Natural Language Chat.
+
+## Main Goal
+Make auto-import the primary experience: the app continuously monitors a user-selected folder (Android/iOS), runs OCR + AI to draft transactions, and queues them for user review. Keep the chat feature as a secondary correction/assistance path.
 
 ## Architectural Strategy
 The app functions as a middleman between the user and a Firefly III instance, following the official [Flutter App Architecture Guide](https://docs.flutter.dev/app-architecture/guide).
@@ -23,6 +26,12 @@ The app functions as a middleman between the user and a Firefly III instance, fo
     *   **Services**: Low-level wrappers for APIs (e.g., `FireflyApiService`, `GeminiAiService`) or local storage.
 
 ## Key Features to Implement
+1. **Auto Import (Folder Watch + OCR)**:
+   - User selects a folder to monitor on device storage.
+   - Background/periodic scan detects new images.
+   - AI extracts: Total, Date, Store Name, Currency.
+   - Drafts are created automatically and wait for user confirmation.
+
 1. **"Snap & Forget" (Vision OCR)**:
    - User takes a photo of a receipt.
    - AI extracts: Total, Date, Store Name, Currency.
