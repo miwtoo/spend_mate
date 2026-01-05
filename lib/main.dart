@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spend_mate/data/repositories/ai_provider_config_repository.dart';
-import 'package:spend_mate/ui/features/ai_chat/ai_chat_screen.dart';
+import 'package:spend_mate/data/repositories/firefly_config_repository.dart';
+import 'package:spend_mate/ui/home/home_screen.dart';
 
 void main() {
   runApp(const MainApp());
@@ -28,7 +29,10 @@ class AppBootstrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: AiProviderConfigRepository.create(),
+      future: Future.wait([
+        AiProviderConfigRepository.create(),
+        FireflyConfigRepository.create(),
+      ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -44,9 +48,13 @@ class AppBootstrap extends StatelessWidget {
           );
         }
 
-        final configRepo = snapshot.data!;
+        final configRepo = snapshot.data![0] as AiProviderConfigRepository;
+        final fireflyConfigRepo = snapshot.data![1] as FireflyConfigRepository;
 
-        return AiChatScreen(configRepository: configRepo);
+        return HomeScreen(
+          configRepository: configRepo,
+          fireflyConfigRepository: fireflyConfigRepo,
+        );
       },
     );
   }

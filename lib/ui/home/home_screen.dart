@@ -1,60 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:spend_mate/data/repositories/ai_provider_config_repository.dart';
-import 'package:spend_mate/ui/features/ai_chat/ai_chat_screen.dart';
-import 'package:spend_mate/ui/features/settings/ai_provider_settings_screen.dart';
+import 'package:spend_mate/data/repositories/firefly_config_repository.dart';
+import 'package:spend_mate/ui/features/settings/settings_screen.dart';
+import 'package:spend_mate/ui/features/transactions/transactions_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.configRepository,
+    required this.fireflyConfigRepository,
   });
 
   final AiProviderConfigRepository configRepository;
+  final FireflyConfigRepository fireflyConfigRepository;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
+    final title = _selectedIndex == 0 ? 'All Transactions' : 'Settings';
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Spend Mate')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      appBar: AppBar(title: Text(title)),
+      body: IndexedStack(
+        index: _selectedIndex,
         children: [
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.chat_bubble_outline),
-              title: const Text('AI Chat'),
-              subtitle: const Text('Talk to your finance concierge'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AiChatScreen(
-                      configRepository: configRepository,
-                    ),
-                  ),
-                );
-              },
-            ),
+          TransactionsScreen(
+            configRepository: widget.configRepository,
+            fireflyConfigRepository: widget.fireflyConfigRepository,
           ),
-          const SizedBox(height: 10),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('AI Provider'),
-              subtitle: const Text('Base URL, API key, model'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AiProviderSettingsScreen(
-                      configRepository: configRepository,
-                    ),
-                  ),
-                );
-              },
-            ),
+          SettingsScreen(
+            configRepository: widget.configRepository,
+            fireflyConfigRepository: widget.fireflyConfigRepository,
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (value) {
+          setState(() => _selectedIndex = value);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long),
+            label: 'Transaction',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings),
+            label: 'Setting',
           ),
         ],
       ),
     );
   }
 }
-
-
