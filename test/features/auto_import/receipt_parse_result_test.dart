@@ -42,4 +42,32 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test('applies time fields to date values', () {
+    const response =
+        '{"amount": "15.00", "currency": "USD", "date": "12/31/2024", "time": "11:30 PM", "type": "transfer"}';
+    final result = ReceiptParseResult.fromAiResponse(response);
+
+    expect(result.date, isNotNull);
+    expect(result.date?.year, 2024);
+    expect(result.date?.month, 12);
+    expect(result.date?.day, 31);
+    expect(result.date?.hour, 23);
+    expect(result.date?.minute, 30);
+    expect(result.type, ReceiptTransactionType.transfer);
+  });
+
+  test('parses date_time and credit type', () {
+    const response =
+        r'{"amount": "$1,234.50", "currency": "USD", "date_time": "2024-01-02T10:15:30", "type": "credit"}';
+    final result = ReceiptParseResult.fromAiResponse(response);
+
+    expect(result.amount, 1234.50);
+    expect(result.date?.year, 2024);
+    expect(result.date?.month, 1);
+    expect(result.date?.day, 2);
+    expect(result.date?.hour, 10);
+    expect(result.date?.minute, 15);
+    expect(result.type, ReceiptTransactionType.income);
+  });
 }
