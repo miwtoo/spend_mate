@@ -77,6 +77,7 @@ class _AutoImportScreenState extends State<AutoImportScreen>
 
   Future<void> _reviewDraft(AutoImportDraft draft) async {
     await _vm.refreshCategories();
+    if (!mounted) return;
     final isConfirmed = draft.status == AutoImportStatus.confirmed;
     final result = await showModalBottomSheet<_DraftEditResult>(
       context: context,
@@ -120,6 +121,7 @@ class _AutoImportScreenState extends State<AutoImportScreen>
       ),
     );
     if (selected == null) {
+      if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Update canceled.')),
       );
