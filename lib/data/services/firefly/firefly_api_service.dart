@@ -1,16 +1,45 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/http.dart' show Client;
 import 'package:spend_mate/config/firefly_config.dart';
+import 'package:spend_mate/data/services/firefly/firefly_api_exception.dart';
 import 'package:spend_mate/domain/models/firefly_account.dart';
 import 'package:spend_mate/domain/models/firefly_category.dart';
 import 'package:spend_mate/domain/models/firefly_transaction_ids.dart';
 import 'package:spend_mate/domain/models/firefly_transaction_request.dart';
 import 'package:spend_mate/domain/models/firefly_transaction_summary.dart';
 
+class _NoRedirectClient extends http.BaseClient {
+  _NoRedirectClient(this._inner);
+
+  final Client _inner;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    // Disable automatic redirects
+    final streamedResponse = await _inner.send(request);
+    final response = http.StreamedResponse(
+      streamedResponse.stream,
+      streamedResponse.statusCode,
+      contentLength: streamedResponse.contentLength,
+      request: streamedResponse.request,
+      headers: streamedResponse.headers,
+      isRedirect: false,
+      persistentConnection: streamedResponse.persistentConnection,
+      reasonPhrase: streamedResponse.reasonPhrase,
+    );
+    return response;
+  }
+
+  @override
+  void close() => _inner.close();
+}
+
 class FireflyApiService {
   FireflyApiService({http.Client? httpClient})
-      : _httpClient = httpClient ?? http.Client(),
+      : _httpClient = httpClient ?? _NoRedirectClient(http.Client()),
         _ownsClient = httpClient == null;
 
   final http.Client _httpClient;
@@ -36,14 +65,25 @@ class FireflyApiService {
       body: jsonEncode(request.toJson()),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly create transaction failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'POST',
+      uri: url,
+      response: response,
+    );
 
-    return _parseTransactionIds(response.body);
+    _ensureJsonResponse(
+      method: 'POST',
+      uri: url,
+      response: response,
+    );
+
+    return _parseTransactionIds(
+      response.body,
+      method: 'POST',
+      uri: url,
+      statusCode: response.statusCode,
+      contentType: _contentType(response),
+    );
   }
 
   Future<FireflyTransactionIds> updateTransaction({
@@ -71,14 +111,25 @@ class FireflyApiService {
       body: jsonEncode(request.toJson()),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly update transaction failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'PUT',
+      uri: url,
+      response: response,
+    );
 
-    return _parseTransactionIds(response.body);
+    _ensureJsonResponse(
+      method: 'PUT',
+      uri: url,
+      response: response,
+    );
+
+    return _parseTransactionIds(
+      response.body,
+      method: 'PUT',
+      uri: url,
+      statusCode: response.statusCode,
+      contentType: _contentType(response),
+    );
   }
 
   Future<List<FireflyAccount>> listAssetAccounts({
@@ -98,15 +149,24 @@ class FireflyApiService {
       },
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly list accounts failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
 
-    final decoded = jsonDecode(response.body);
-    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    _ensureJsonResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+
+    final decoded = _decodeJsonMap(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+    final data = decoded['data'];
     if (data is! List) return const [];
 
     final accounts = <FireflyAccount>[];
@@ -144,15 +204,24 @@ class FireflyApiService {
       },
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly list accounts failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
 
-    final decoded = jsonDecode(response.body);
-    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    _ensureJsonResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+
+    final decoded = _decodeJsonMap(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+    final data = decoded['data'];
     if (data is! List) return const [];
 
     final accounts = <FireflyAccount>[];
@@ -190,15 +259,24 @@ class FireflyApiService {
       },
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly list categories failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
 
-    final decoded = jsonDecode(response.body);
-    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    _ensureJsonResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+
+    final decoded = _decodeJsonMap(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+    final data = decoded['data'];
     if (data is! List) return const [];
 
     final categories = <FireflyCategory>[];
@@ -239,15 +317,24 @@ class FireflyApiService {
       body: jsonEncode({'name': trimmed}),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly create category failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'POST',
+      uri: url,
+      response: response,
+    );
 
-    final decoded = jsonDecode(response.body);
-    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    _ensureJsonResponse(
+      method: 'POST',
+      uri: url,
+      response: response,
+    );
+
+    final decoded = _decodeJsonMap(
+      method: 'POST',
+      uri: url,
+      response: response,
+    );
+    final data = decoded['data'];
     final parsed = _parseCategory(data);
     return parsed ?? FireflyCategory(id: trimmed, name: trimmed);
   }
@@ -278,14 +365,25 @@ class FireflyApiService {
       },
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = response.body.trim().isEmpty
-          ? 'HTTP ${response.statusCode}'
-          : 'HTTP ${response.statusCode}: ${response.body}';
-      throw Exception('Firefly list transactions failed: $message');
-    }
+    _ensureSuccessResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
 
-    return _parseTransactionSummaries(response.body);
+    _ensureJsonResponse(
+      method: 'GET',
+      uri: url,
+      response: response,
+    );
+
+    return _parseTransactionSummaries(
+      response.body,
+      method: 'GET',
+      uri: url,
+      statusCode: response.statusCode,
+      contentType: _contentType(response),
+    );
   }
 
   void dispose() {
@@ -305,7 +403,13 @@ class FireflyApiService {
     return FireflyCategory(id: id.isEmpty ? name.trim() : id, name: name.trim());
   }
 
-  FireflyTransactionIds _parseTransactionIds(String responseBody) {
+  FireflyTransactionIds _parseTransactionIds(
+    String responseBody, {
+    required String method,
+    required Uri uri,
+    required int statusCode,
+    required String? contentType,
+  }) {
     final trimmed = responseBody.trim();
     if (trimmed.isEmpty) return const FireflyTransactionIds();
 
@@ -313,7 +417,15 @@ class FireflyApiService {
     try {
       decoded = jsonDecode(trimmed);
     } catch (_) {
-      return const FireflyTransactionIds();
+      final exception = FireflyApiException.invalidJson(
+        method: method,
+        uri: uri,
+        statusCode: statusCode,
+        responseSnippet: _snippetFor(responseBody),
+        contentType: contentType,
+      );
+      _logApiError(exception);
+      throw exception;
     }
 
     final data = _firstData(decoded);
@@ -337,8 +449,12 @@ class FireflyApiService {
   }
 
   List<FireflyTransactionSummary> _parseTransactionSummaries(
-    String responseBody,
-  ) {
+    String responseBody, {
+    required String method,
+    required Uri uri,
+    required int statusCode,
+    required String? contentType,
+  }) {
     final trimmed = responseBody.trim();
     if (trimmed.isEmpty) return const [];
 
@@ -346,7 +462,15 @@ class FireflyApiService {
     try {
       decoded = jsonDecode(trimmed);
     } catch (_) {
-      return const [];
+      final exception = FireflyApiException.invalidJson(
+        method: method,
+        uri: uri,
+        statusCode: statusCode,
+        responseSnippet: _snippetFor(responseBody),
+        contentType: contentType,
+      );
+      _logApiError(exception);
+      throw exception;
     }
 
     if (decoded is! Map) return const [];
@@ -442,5 +566,141 @@ class FireflyApiService {
     final month = local.month.toString().padLeft(2, '0');
     final day = local.day.toString().padLeft(2, '0');
     return '$year-$month-$day';
+  }
+
+  void _ensureSuccessResponse({
+    required String method,
+    required Uri uri,
+    required http.Response response,
+  }) {
+    // Detect 302 redirects - typically indicates authentication failure
+    // Firefly III redirects to login page when unauthenticated
+    if (response.statusCode == 302 || response.statusCode == 301) {
+      final location = response.headers['location'];
+      final exception = FireflyApiException.authenticationRequired(
+        method: method,
+        uri: uri,
+        responseSnippet: 'Redirect to: ${location ?? "unknown"}',
+        contentType: _contentType(response),
+      );
+      _logApiError(exception);
+      throw exception;
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    // Handle gateway errors (502, 503, 504) with specific messages
+    if (response.statusCode >= 502 && response.statusCode <= 504) {
+      final exception = FireflyApiException.gatewayError(
+        method: method,
+        uri: uri,
+        statusCode: response.statusCode,
+        responseSnippet: _snippetFor(response.body),
+        contentType: _contentType(response),
+      );
+      _logApiError(exception);
+      throw exception;
+    }
+
+    final exception = FireflyApiException.httpError(
+      method: method,
+      uri: uri,
+      statusCode: response.statusCode,
+      responseSnippet: _snippetFor(response.body),
+      contentType: _contentType(response),
+      isJson: _isJsonResponse(response),
+    );
+    _logApiError(exception);
+    throw exception;
+  }
+
+  void _ensureJsonResponse({
+    required String method,
+    required Uri uri,
+    required http.Response response,
+  }) {
+    final trimmed = response.body.trim();
+    if (trimmed.isEmpty) return;
+
+    final contentType = _contentType(response);
+    final isJson = _isJsonResponse(response);
+    if (isJson) return;
+    if (_looksLikeHtml(trimmed)) {
+      final exception = FireflyApiException.unexpectedResponse(
+        method: method,
+        uri: uri,
+        statusCode: response.statusCode,
+        responseSnippet: _snippetFor(trimmed),
+        contentType: contentType,
+        isJson: false,
+      );
+      _logApiError(exception);
+      throw exception;
+    }
+  }
+
+  Map<String, dynamic> _decodeJsonMap({
+    required String method,
+    required Uri uri,
+    required http.Response response,
+  }) {
+    final trimmed = response.body.trim();
+    if (trimmed.isEmpty) return const {};
+
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return <String, dynamic>{'data': decoded};
+    } catch (_) {
+      final exception = FireflyApiException.invalidJson(
+        method: method,
+        uri: uri,
+        statusCode: response.statusCode,
+        responseSnippet: _snippetFor(response.body),
+        contentType: _contentType(response),
+      );
+      _logApiError(exception);
+      throw exception;
+    }
+  }
+
+  String? _contentType(http.Response response) {
+    return response.headers['content-type'];
+  }
+
+  bool _isJsonResponse(http.Response response) {
+    final contentType = _contentType(response);
+    return contentType != null && contentType.toLowerCase().contains('json');
+  }
+
+  bool _looksLikeHtml(String value) {
+    final lowered = value.trimLeft().toLowerCase();
+    return lowered.startsWith('<!doctype') ||
+        lowered.startsWith('<html') ||
+        lowered.startsWith('<head') ||
+        lowered.startsWith('<body');
+  }
+
+  String _snippetFor(String value) {
+    var snippet = value.trim();
+    if (snippet.isEmpty) return '';
+    snippet = snippet.replaceAll(RegExp(r'\\s+'), ' ');
+    const limit = 200;
+    if (snippet.length > limit) {
+      snippet = snippet.substring(0, limit);
+    }
+    return snippet;
+  }
+
+  void _logApiError(FireflyApiException exception) {
+    debugPrint(
+      'Firefly API error ${exception.method} ${exception.uri} '
+      'status=${exception.statusCode} '
+      'content-type=${exception.contentType ?? 'unknown'} '
+      'snippet="${exception.responseSnippet}"',
+    );
   }
 }

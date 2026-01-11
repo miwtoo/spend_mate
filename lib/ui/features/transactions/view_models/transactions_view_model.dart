@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:spend_mate/data/repositories/firefly_config_repository.dart';
 import 'package:spend_mate/data/repositories/firefly_transaction_repository.dart';
+import 'package:spend_mate/data/services/firefly/firefly_api_exception.dart';
 import 'package:spend_mate/domain/models/firefly_transaction_summary.dart';
 
 class TransactionsViewModel extends ChangeNotifier {
@@ -34,7 +35,8 @@ class TransactionsViewModel extends ChangeNotifier {
       _transactions = fetched;
       _error = null;
     } catch (e) {
-      _error = 'Failed to load transactions: $e';
+      final message = _friendlyErrorMessage(e);
+      _error = 'Failed to load transactions. $message';
       _transactions = const [];
     } finally {
       _isLoading = false;
@@ -49,6 +51,13 @@ class TransactionsViewModel extends ChangeNotifier {
   void _notifySafely() {
     if (_disposed) return;
     notifyListeners();
+  }
+
+  String _friendlyErrorMessage(Object error) {
+    if (error is FireflyApiException) {
+      return error.userMessage;
+    }
+    return 'Please try again.';
   }
 
   @override
