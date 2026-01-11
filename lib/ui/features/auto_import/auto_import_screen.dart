@@ -75,6 +75,25 @@ class _AutoImportScreenState extends State<AutoImportScreen>
     );
   }
 
+  Future<void> _openDiscardedDrafts() async {
+    if (_vm.discardedDrafts.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No discarded transactions to restore.')),
+      );
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _DiscardedDraftsSheet(
+        drafts: _vm.discardedDrafts,
+        onRestore: _vm.restoreDraft,
+        onRestoreAll: _vm.restoreAllDiscardedDrafts,
+      ),
+    );
+  }
+
   Future<void> _reviewDraft(AutoImportDraft draft) async {
     await _vm.refreshCategories();
     if (!mounted) return;
@@ -341,17 +360,27 @@ class _AutoImportScreenState extends State<AutoImportScreen>
                         'Pending review',
                         style: theme.textTheme.titleMedium,
                       ),
-                      if (failedCount > 0 || _vm.isRetrying)
-                        TextButton.icon(
-                          onPressed:
-                              _vm.isRetrying ? null : _vm.retryFailedDrafts,
-                          icon: const Icon(Icons.refresh),
-                          label: Text(
-                            _vm.isRetrying
-                                ? 'Retrying ${_vm.retryRemaining} left'
-                                : 'Retry all failed',
-                          ),
-                        ),
+                      Row(
+                        children: [
+                          if (_vm.discardedDrafts.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: _openDiscardedDrafts,
+                              icon: const Icon(Icons.restore_from_trash_outlined),
+                              label: Text('Restore (${_vm.discardedDrafts.length})'),
+                            ),
+                          if (failedCount > 0 || _vm.isRetrying)
+                            TextButton.icon(
+                              onPressed:
+                                  _vm.isRetrying ? null : _vm.retryFailedDrafts,
+                              icon: const Icon(Icons.refresh),
+                              label: Text(
+                                _vm.isRetrying
+                                    ? 'Retrying ${_vm.retryRemaining} left'
+                                    : 'Retry all failed',
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1656,4 +1685,159 @@ String _typeLabel(ReceiptTransactionType type) {
     ReceiptTransactionType.transfer => 'Transfer',
     ReceiptTransactionType.unknown => 'Unknown',
   };
+}
+
+class _DiscardedDraftsSheet extends StatelessWidget {
+  const _DiscardedDraftsSheet({
+    required this.drafts,
+    required this.onRestore,
+    required this.onRestoreAll,
+  });
+
+  final List<AutoImportDraft> drafts;
+  final Future<void> Function(String id) onRestore;
+  final Future<void> Function() onRestoreAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Discarded Transactions',
+                  style: theme.textTheme.titleLarge,
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${drafts.length} discarded transaction${drafts.length == 1 ? '' : 's'}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: onRestoreAll,
+              icon: const Icon(Icons.restore),
+              label: const Text('Restore All'),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: ListView.separated(
+                itemCount: drafts.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final draft = drafts[index];
+                  return _DiscardedDraftCard(
+                    draft: draft,
+                    onRestore: onRestore,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscardedDraftCard extends StatelessWidget {
+  const _DiscardedDraftCard({
+    required this.draft,
+    required this.onRestore,
+  });
+
+  final AutoImportDraft draft;
+  final Future<void> Function(String id) onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final amountLabel = _formatAmount(draft.amount, draft.currency);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ReceiptPreview(path: draft.sourcePath),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        draft.merchant ?? 'Unknown merchant',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        amountLabel,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        draft.date != null
+                            ? 'Date: ${_formatDateTime(context, draft.date!)}'
+                            : 'Date: unknown',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      Text(
+                        'Detected: ${_formatDateTime(context, draft.detectedAt)}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (draft.categoryName?.trim().isNotEmpty == true)
+                        Text(
+                          'Category: ${draft.categoryName!.trim()}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => onRestore(draft.id),
+                  icon: const Icon(Icons.restore),
+                  label: const Text('Restore'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

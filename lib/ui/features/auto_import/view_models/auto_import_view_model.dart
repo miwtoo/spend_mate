@@ -65,6 +65,10 @@ class AutoImportViewModel extends ChangeNotifier {
           draft.status != AutoImportStatus.discarded &&
           draft.status != AutoImportStatus.confirmed)
       .toList(growable: false);
+
+  List<AutoImportDraft> get discardedDrafts => _state.drafts
+      .where((draft) => draft.status == AutoImportStatus.discarded)
+      .toList(growable: false);
   DateTime? get lastScanAt => _state.lastScanAt;
   bool get isScanning => _isScanning;
   bool get isRetrying => _isRetrying;
@@ -491,6 +495,36 @@ class AutoImportViewModel extends ChangeNotifier {
       drafts: _state.drafts
           .map((draft) => draft.id == id
               ? draft.copyWith(status: AutoImportStatus.discarded)
+              : draft)
+          .toList(growable: false),
+    );
+    await _saveState();
+    _notifySafely();
+  }
+
+  Future<void> restoreDraft(String id) async {
+    _state = _state.copyWith(
+      drafts: _state.drafts
+          .map((draft) => draft.id == id
+              ? draft.copyWith(status: AutoImportStatus.pending)
+              : draft)
+          .toList(growable: false),
+    );
+    await _saveState();
+    _notifySafely();
+  }
+
+  Future<void> restoreAllDiscardedDrafts() async {
+    final discardedIds = _state.drafts
+        .where((draft) => draft.status == AutoImportStatus.discarded)
+        .map((draft) => draft.id)
+        .toSet();
+    if (discardedIds.isEmpty) return;
+
+    _state = _state.copyWith(
+      drafts: _state.drafts
+          .map((draft) => discardedIds.contains(draft.id)
+              ? draft.copyWith(status: AutoImportStatus.pending)
               : draft)
           .toList(growable: false),
     );

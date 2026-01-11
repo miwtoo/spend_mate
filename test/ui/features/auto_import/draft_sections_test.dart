@@ -64,6 +64,42 @@ void main() {
       expect(drafts[2].id, '4'); // 2 days ago
       expect(drafts[3].id, '1'); // 3 days ago
     });
+
+    test('should filter only discarded drafts for recovery UI', () {
+      final allDrafts = [
+        _createDraft('1', AutoImportStatus.processing),
+        _createDraft('2', AutoImportStatus.pending),
+        _createDraft('3', AutoImportStatus.failed),
+        _createDraft('4', AutoImportStatus.confirmed),
+        _createDraft('5', AutoImportStatus.discarded),
+        _createDraft('6', AutoImportStatus.discarded),
+      ];
+
+      // Filter only discarded drafts (what discardedDrafts getter does)
+      final discardedDrafts = allDrafts
+          .where((draft) => draft.status == AutoImportStatus.discarded)
+          .toList();
+
+      // Verify only discarded drafts are included
+      expect(discardedDrafts, hasLength(2));
+      expect(discardedDrafts[0].id, '5');
+      expect(discardedDrafts[1].id, '6');
+    });
+
+    test('should handle empty discarded drafts list', () {
+      final allDrafts = [
+        _createDraft('1', AutoImportStatus.processing),
+        _createDraft('2', AutoImportStatus.pending),
+        _createDraft('3', AutoImportStatus.failed),
+        _createDraft('4', AutoImportStatus.confirmed),
+      ];
+
+      final discardedDrafts = allDrafts
+          .where((draft) => draft.status == AutoImportStatus.discarded)
+          .toList();
+
+      expect(discardedDrafts, isEmpty);
+    });
   });
 }
 
