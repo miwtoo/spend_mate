@@ -61,7 +61,9 @@ class AutoImportViewModel extends ChangeNotifier {
   bool get enabled => _state.enabled;
   List<String> get folderPaths => List.unmodifiable(_state.folderPaths);
   List<AutoImportDraft> get visibleDrafts => _state.drafts
-      .where((draft) => draft.status != AutoImportStatus.discarded)
+      .where((draft) =>
+          draft.status != AutoImportStatus.discarded &&
+          draft.status != AutoImportStatus.confirmed)
       .toList(growable: false);
   DateTime? get lastScanAt => _state.lastScanAt;
   bool get isScanning => _isScanning;

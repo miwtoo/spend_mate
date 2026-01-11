@@ -87,6 +87,35 @@ class FireflyTransactionRepository {
     );
   }
 
+  Future<List<FireflyTransactionSummary>> fetchAllTransactions() async {
+    final config = await _configRepository.load();
+    _validateConfig(config);
+
+    final startDate = DateTime(1970, 1, 1);
+    final endDate = DateTime.now();
+
+    final allTransactions = <FireflyTransactionSummary>[];
+    var page = 1;
+
+    while (true) {
+      final transactions = await _apiService.listTransactions(
+        config: config,
+        start: startDate,
+        end: endDate,
+        page: page,
+      );
+
+      if (transactions.isEmpty) {
+        break;
+      }
+
+      allTransactions.addAll(transactions);
+      page++;
+    }
+
+    return allTransactions;
+  }
+
   FireflyTransactionRequest _buildRequest(
     AutoImportDraft draft,
     FireflyConfig config,

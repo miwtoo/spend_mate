@@ -1,6 +1,7 @@
 import 'package:spend_mate/domain/models/receipt_parse_result.dart';
 
 enum AutoImportStatus {
+  processing,
   pending,
   confirmed,
   discarded,
@@ -137,6 +138,7 @@ AutoImportStatus _parseStatus(dynamic value) {
   if (value == null) return AutoImportStatus.pending;
   final text = value.toString().toLowerCase();
   return switch (text) {
+    'processing' => AutoImportStatus.processing,
     'confirmed' => AutoImportStatus.confirmed,
     'discarded' => AutoImportStatus.discarded,
     'failed' => AutoImportStatus.failed,

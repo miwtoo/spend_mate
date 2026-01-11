@@ -400,34 +400,135 @@ List<Widget> _buildDraftSections(
   final theme = Theme.of(context);
   final localizations = MaterialLocalizations.of(context);
 
-  final datedDrafts =
-      drafts.where((draft) => draft.date != null).toList(growable: false);
-  final unknownDrafts =
-      drafts.where((draft) => draft.date == null).toList(growable: false);
+  // Group drafts by status
+  final processingDrafts = drafts
+      .where((draft) => draft.status == AutoImportStatus.processing)
+      .toList();
+  final pendingDrafts = drafts
+      .where((draft) => draft.status == AutoImportStatus.pending)
+      .toList();
+  final failedDrafts = drafts
+      .where((draft) => draft.status == AutoImportStatus.failed)
+      .toList();
 
-  datedDrafts.sort((a, b) {
-    final dateCompare = b.date!.compareTo(a.date!);
-    if (dateCompare != 0) return dateCompare;
-    return b.detectedAt.compareTo(a.detectedAt);
-  });
-
-  unknownDrafts.sort((a, b) => b.detectedAt.compareTo(a.detectedAt));
+  // Sort each section by date/detectedAt (newest first)
+  for (final sectionDrafts in [processingDrafts, pendingDrafts, failedDrafts]) {
+    sectionDrafts.sort((a, b) {
+      final dateA = a.date ?? a.detectedAt;
+      final dateB = b.date ?? b.detectedAt;
+      return dateB.compareTo(dateA);
+    });
+  }
 
   bool isFirstSection = true;
-  DateTime? currentMonth;
-  DateTime? currentDay;
 
-  void addMonthHeader(DateTime month) {
+  // Helper to add a status section header
+  void addStatusHeader(String title) {
     if (!isFirstSection) {
       widgets.add(const SizedBox(height: 16));
     }
     widgets.add(
       Text(
-        localizations.formatMonthYear(month),
-        style: theme.textTheme.titleSmall,
+        title,
+        style: theme.textTheme.titleMedium,
       ),
     );
+    widgets.add(const SizedBox(height: 8));
     isFirstSection = false;
+  }
+
+  // Add Processing section
+  if (processingDrafts.isNotEmpty) {
+    addStatusHeader('Processing');
+    widgets.addAll(_buildDraftCardsForSection(
+      processingDrafts,
+      theme: theme,
+      localizations: localizations,
+      onReview: onReview,
+      onConfirm: onConfirm,
+      onDiscard: onDiscard,
+      onRetry: onRetry,
+      retryEnabled: retryEnabled,
+      activeRetryId: activeRetryId,
+      queuedRetryIds: queuedRetryIds,
+    ));
+  }
+
+  // Add Pending approval section
+  if (pendingDrafts.isNotEmpty) {
+    addStatusHeader('Pending approval');
+    widgets.addAll(_buildDraftCardsForSection(
+      pendingDrafts,
+      theme: theme,
+      localizations: localizations,
+      onReview: onReview,
+      onConfirm: onConfirm,
+      onDiscard: onDiscard,
+      onRetry: onRetry,
+      retryEnabled: retryEnabled,
+      activeRetryId: activeRetryId,
+      queuedRetryIds: queuedRetryIds,
+    ));
+  }
+
+  // Add Failed section
+  if (failedDrafts.isNotEmpty) {
+    addStatusHeader('Failed');
+    widgets.addAll(_buildDraftCardsForSection(
+      failedDrafts,
+      theme: theme,
+      localizations: localizations,
+      onReview: onReview,
+      onConfirm: onConfirm,
+      onDiscard: onDiscard,
+      onRetry: onRetry,
+      retryEnabled: retryEnabled,
+      activeRetryId: activeRetryId,
+      queuedRetryIds: queuedRetryIds,
+    ));
+  }
+
+  return widgets;
+}
+
+List<Widget> _buildDraftCardsForSection(
+  List<AutoImportDraft> sectionDrafts, {
+  required ThemeData theme,
+  required MaterialLocalizations localizations,
+  required void Function(AutoImportDraft draft) onReview,
+  required void Function(String id) onConfirm,
+  required void Function(String id) onDiscard,
+  required void Function(AutoImportDraft draft) onRetry,
+  required bool retryEnabled,
+  required String? activeRetryId,
+  required Set<String> queuedRetryIds,
+}) {
+  final widgets = <Widget>[];
+  final datedDrafts = sectionDrafts
+      .where((draft) => draft.date != null)
+      .toList(growable: false);
+  final unknownDrafts = sectionDrafts
+      .where((draft) => draft.date == null)
+      .toList(growable: false);
+
+  bool isFirstGroup = true;
+  DateTime? currentMonth;
+  DateTime? currentDay;
+
+  void addMonthHeader(DateTime month) {
+    if (!isFirstGroup) {
+      widgets.add(const SizedBox(height: 12));
+    }
+    widgets.add(
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          localizations.formatMonthYear(month),
+          style: theme.textTheme.titleSmall,
+        ),
+      ),
+    );
+    isFirstGroup = false;
     currentMonth = month;
   }
 
@@ -475,13 +576,16 @@ List<Widget> _buildDraftSections(
   }
 
   if (unknownDrafts.isNotEmpty) {
-    if (!isFirstSection) {
-      widgets.add(const SizedBox(height: 16));
+    if (!isFirstGroup) {
+      widgets.add(const SizedBox(height: 12));
     }
     widgets.add(
-      Text(
-        'Unknown date',
-        style: theme.textTheme.titleSmall,
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          'Unknown date',
+          style: theme.textTheme.titleSmall,
+        ),
       ),
     );
     widgets.add(const SizedBox(height: 8));
@@ -641,6 +745,22 @@ class _DraftCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                if (draft.status == AutoImportStatus.processing)
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 8),
+                        Text('AI parsing in progress...'),
+                      ],
+                    ),
+                  ),
                 if (draft.status == AutoImportStatus.pending)
                   FilledButton(
                     onPressed: () => onReview(draft),
@@ -782,8 +902,9 @@ Future<void> _showReceiptPreview(BuildContext context, File file) async {
 
 String _statusLabel(AutoImportStatus status) {
   return switch (status) {
-    AutoImportStatus.pending => 'Pending review',
-    AutoImportStatus.confirmed => 'Success',
+    AutoImportStatus.processing => 'Processing',
+    AutoImportStatus.pending => 'Pending approval',
+    AutoImportStatus.confirmed => 'Confirmed',
     AutoImportStatus.discarded => 'Discarded',
     AutoImportStatus.failed => 'Failed',
   };
