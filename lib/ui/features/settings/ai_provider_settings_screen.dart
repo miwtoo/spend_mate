@@ -180,7 +180,8 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
                     tooltip: _obscureApiKey ? 'Show' : 'Hide',
                     onPressed: _saving
                         ? null
-                        : () => setState(() => _obscureApiKey = !_obscureApiKey),
+                        : () =>
+                            setState(() => _obscureApiKey = !_obscureApiKey),
                     icon: Icon(
                       _obscureApiKey ? Icons.visibility : Icons.visibility_off,
                     ),
@@ -211,4 +212,3 @@ class _AiProviderSettingsScreenState extends State<AiProviderSettingsScreen> {
     );
   }
 }
-

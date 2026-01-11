@@ -39,8 +39,7 @@ class AutoImportState {
     return AutoImportState(
       enabled: enabled ?? this.enabled,
       folderPaths: folderPaths ?? this.folderPaths,
-      assetAccountByFolder:
-          assetAccountByFolder ?? this.assetAccountByFolder,
+      assetAccountByFolder: assetAccountByFolder ?? this.assetAccountByFolder,
       drafts: drafts ?? this.drafts,
       processedFiles: processedFiles ?? this.processedFiles,
       lastScanAt: lastScanAt ?? this.lastScanAt,
@@ -70,8 +69,7 @@ class AutoImportState {
     return AutoImportState(
       enabled: json['enabled'] == true,
       folderPaths: folderPaths,
-      assetAccountByFolder:
-          _parseStringMap(json['assetAccountByFolder']),
+      assetAccountByFolder: _parseStringMap(json['assetAccountByFolder']),
       drafts: _parseDrafts(json['drafts']),
       processedFiles: _parseStringList(json['processedFiles']),
       lastScanAt: DateTime.tryParse(json['lastScanAt']?.toString() ?? ''),

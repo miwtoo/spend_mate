@@ -51,8 +51,15 @@ class AutoImportViewModel extends ChangeNotifier {
   List<FireflyCategory> _categories = const [];
   bool _disposed = false;
 
+  // Batch save state
+  bool _isSavingAll = false;
+  String? _activeSaveId;
+  List<String> _saveQueueIds = const [];
+  int _saveRemaining = 0;
+
   static const Duration scanInterval = Duration(seconds: 30);
   static const Duration retryDelay = Duration(seconds: 2);
+  static const Duration saveDelay = Duration(milliseconds: 500);
   static const int maxAttachmentBytes = 8 * 1024 * 1024;
   static const int maxProcessedFiles = 500;
   static const int maxFilesPerScan = 5;
@@ -77,8 +84,7 @@ class AutoImportViewModel extends ChangeNotifier {
   int get retryRemaining => _retryRemaining;
   String? get error => _error;
   bool get isLoadingAssets => _isLoadingAssets;
-  List<FireflyAccount> get assetAccounts =>
-      List.unmodifiable(_assetAccounts);
+  List<FireflyAccount> get assetAccounts => List.unmodifiable(_assetAccounts);
   bool get isLoadingMerchants => _isLoadingMerchants;
   List<String> get merchantSuggestions =>
       List.unmodifiable(_merchantSuggestions);
@@ -86,6 +92,12 @@ class AutoImportViewModel extends ChangeNotifier {
   List<String> get categorySuggestions => List.unmodifiable(
         _categories.map((category) => category.name),
       );
+
+  // Batch save getters
+  bool get isSavingAll => _isSavingAll;
+  String? get activeSaveId => _activeSaveId;
+  List<String> get saveQueueIds => List.unmodifiable(_saveQueueIds);
+  int get saveRemaining => _saveRemaining;
 
   String? assetAccountForFolder(String folder) {
     final normalized = _normalizeFolderPath(folder);
@@ -143,9 +155,7 @@ class AutoImportViewModel extends ChangeNotifier {
       return;
     }
 
-    final existing = _state.folderPaths
-        .map(_normalizeFolderPath)
-        .toSet();
+    final existing = _state.folderPaths.map(_normalizeFolderPath).toSet();
     if (existing.contains(normalized)) return;
 
     final updatedAssetMap = Map<String, String>.from(
@@ -353,8 +363,7 @@ class AutoImportViewModel extends ChangeNotifier {
                     errorMessage: null,
                     fireflyTransactionId:
                         created.transactionId ?? draft.fireflyTransactionId,
-                    fireflyTransactionJournalId: created
-                            .transactionJournalId ??
+                    fireflyTransactionJournalId: created.transactionJournalId ??
                         draft.fireflyTransactionJournalId,
                   )
                 : draft)
@@ -394,8 +403,7 @@ class AutoImportViewModel extends ChangeNotifier {
                 : draft)
             .toList(growable: false),
       );
-      _error =
-          'Update failed: missing Firefly transaction id for this draft.';
+      _error = 'Update failed: missing Firefly transaction id for this draft.';
       await _saveState();
       _notifySafely();
       return;
@@ -414,8 +422,7 @@ class AutoImportViewModel extends ChangeNotifier {
                     errorMessage: null,
                     fireflyTransactionId:
                         updated.transactionId ?? draft.fireflyTransactionId,
-                    fireflyTransactionJournalId: updated
-                            .transactionJournalId ??
+                    fireflyTransactionJournalId: updated.transactionJournalId ??
                         draft.fireflyTransactionJournalId,
                   )
                 : draft)
@@ -466,8 +473,7 @@ class AutoImportViewModel extends ChangeNotifier {
             (draft) => draft.id == draftId
                 ? draft.copyWith(
                     fireflyTransactionId: summary.transactionId,
-                    fireflyTransactionJournalId:
-                        summary.transactionJournalId,
+                    fireflyTransactionJournalId: summary.transactionJournalId,
                   )
                 : draft,
           )
@@ -565,10 +571,8 @@ class AutoImportViewModel extends ChangeNotifier {
     for (var index = 0; index < failedDrafts.length; index += 1) {
       if (_disposed) break;
       _activeRetryId = failedDrafts[index].id;
-      _retryQueueIds = failedDrafts
-          .sublist(index)
-          .map((draft) => draft.id)
-          .toList();
+      _retryQueueIds =
+          failedDrafts.sublist(index).map((draft) => draft.id).toList();
       _notifySafely();
       if (index > 0) {
         await Future.delayed(retryDelay);
@@ -626,6 +630,70 @@ class AutoImportViewModel extends ChangeNotifier {
           .toList(growable: false),
     );
     await _saveState();
+  }
+
+  /// Saves all pending drafts to Firefly III in a batch operation.
+  /// Follows the same pattern as retryFailedDrafts for consistency.
+  Future<void> saveAllDrafts() async {
+    if (_isSavingAll || _isRetrying) return;
+    final pendingDrafts = _state.drafts
+        .where((draft) => draft.status == AutoImportStatus.pending)
+        .toList(growable: false);
+    if (pendingDrafts.isEmpty) {
+      _error = 'No pending drafts to save.';
+      _notifySafely();
+      return;
+    }
+
+    _isSavingAll = true;
+    _activeSaveId = null;
+    _saveRemaining = pendingDrafts.length;
+    _saveQueueIds = pendingDrafts.map((draft) => draft.id).toList();
+    _notifySafely();
+
+    var successCount = 0;
+    var failureCount = 0;
+
+    for (var index = 0; index < pendingDrafts.length; index += 1) {
+      if (_disposed) break;
+      _activeSaveId = pendingDrafts[index].id;
+      _saveQueueIds =
+          pendingDrafts.sublist(index).map((draft) => draft.id).toList();
+      _notifySafely();
+      if (index > 0) {
+        await Future.delayed(saveDelay);
+      }
+
+      try {
+        await confirmDraft(pendingDrafts[index].id);
+        // Check if the draft was successfully confirmed
+        final updatedDraft = _state.drafts
+            .where((draft) => draft.id == pendingDrafts[index].id)
+            .firstOrNull;
+        if (updatedDraft?.status == AutoImportStatus.confirmed) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      } catch (_) {
+        failureCount++;
+      }
+      _saveRemaining = pendingDrafts.length - index - 1;
+      _notifySafely();
+    }
+
+    _isSavingAll = false;
+    _activeSaveId = null;
+    _saveQueueIds = const [];
+    _saveRemaining = 0;
+
+    if (failureCount > 0) {
+      _error = 'Saved $successCount draft${successCount == 1 ? '' : 's'}, '
+          '$failureCount failed.';
+    } else {
+      _error = null;
+    }
+    _notifySafely();
   }
 
   Future<AutoImportDraft> _analyzeFile(
@@ -706,14 +774,10 @@ class AutoImportViewModel extends ChangeNotifier {
     AutoImportDraft original,
     AutoImportDraft analyzed,
   ) {
-    final analysisFailed =
-        analyzed.status == AutoImportStatus.failed;
-    final keepConfirmed =
-        original.status == AutoImportStatus.confirmed;
+    final analysisFailed = analyzed.status == AutoImportStatus.failed;
+    final keepConfirmed = original.status == AutoImportStatus.confirmed;
     final nextStatus = analysisFailed
-        ? (keepConfirmed
-            ? AutoImportStatus.confirmed
-            : AutoImportStatus.failed)
+        ? (keepConfirmed ? AutoImportStatus.confirmed : AutoImportStatus.failed)
         : (keepConfirmed
             ? AutoImportStatus.confirmed
             : AutoImportStatus.pending);
@@ -726,21 +790,16 @@ class AutoImportViewModel extends ChangeNotifier {
       status: nextStatus,
       sourceHash: analyzed.sourceHash ?? original.sourceHash,
       fireflyTransactionId: original.fireflyTransactionId,
-      fireflyTransactionJournalId:
-          original.fireflyTransactionJournalId,
-      merchant:
-          shouldReplace ? analyzed.merchant : original.merchant,
+      fireflyTransactionJournalId: original.fireflyTransactionJournalId,
+      merchant: shouldReplace ? analyzed.merchant : original.merchant,
       amount: shouldReplace ? analyzed.amount : original.amount,
-      currency:
-          shouldReplace ? analyzed.currency : original.currency,
+      currency: shouldReplace ? analyzed.currency : original.currency,
       date: shouldReplace ? analyzed.date : original.date,
       note: shouldReplace ? analyzed.note : original.note,
       categoryName: original.categoryName,
       type: shouldReplace ? analyzed.type : original.type,
-      confidence:
-          shouldReplace ? analyzed.confidence : original.confidence,
-      assetAccountName:
-          analyzed.assetAccountName ?? original.assetAccountName,
+      confidence: shouldReplace ? analyzed.confidence : original.confidence,
+      assetAccountName: analyzed.assetAccountName ?? original.assetAccountName,
       errorMessage: analysisFailed ? analyzed.errorMessage : null,
     );
   }
@@ -906,10 +965,8 @@ class AutoImportViewModel extends ChangeNotifier {
     scored.sort((a, b) {
       final scoreCompare = b.$2.compareTo(a.$2);
       if (scoreCompare != 0) return scoreCompare;
-      final dateDeltaA =
-          (a.$1.date.toLocal().difference(baseDate)).abs();
-      final dateDeltaB =
-          (b.$1.date.toLocal().difference(baseDate)).abs();
+      final dateDeltaA = (a.$1.date.toLocal().difference(baseDate)).abs();
+      final dateDeltaB = (b.$1.date.toLocal().difference(baseDate)).abs();
       return dateDeltaA.compareTo(dateDeltaB);
     });
 
@@ -941,8 +998,7 @@ class AutoImportViewModel extends ChangeNotifier {
     }
 
     if (currencyQuery != null && currencyQuery.isNotEmpty) {
-      if ((transaction.currencyCode ?? '').toUpperCase() ==
-          currencyQuery) {
+      if ((transaction.currencyCode ?? '').toUpperCase() == currencyQuery) {
         score += 1;
       }
     }
@@ -1043,8 +1099,7 @@ class AutoImportViewModel extends ChangeNotifier {
     _notifySafely();
 
     try {
-      final categories =
-          await _fireflyCategoryRepository!.listCategories();
+      final categories = await _fireflyCategoryRepository!.listCategories();
       _categories = _mergeCategories(categories);
 
       final selectedCategories = _state.drafts
@@ -1056,8 +1111,7 @@ class AutoImportViewModel extends ChangeNotifier {
         final extras = selectedCategories
             .where(
               (name) => !_categories.any(
-                (category) =>
-                    category.name.toLowerCase() == name.toLowerCase(),
+                (category) => category.name.toLowerCase() == name.toLowerCase(),
               ),
             )
             .map(
@@ -1081,16 +1135,14 @@ class AutoImportViewModel extends ChangeNotifier {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return null;
     final existing = _categories.firstWhere(
-      (category) =>
-          category.name.toLowerCase() == trimmed.toLowerCase(),
+      (category) => category.name.toLowerCase() == trimmed.toLowerCase(),
       orElse: () => const FireflyCategory(id: '', name: ''),
     );
     if (existing.name.isNotEmpty) {
       return existing.name;
     }
     try {
-      final created =
-          await _fireflyCategoryRepository!.createCategory(trimmed);
+      final created = await _fireflyCategoryRepository!.createCategory(trimmed);
       _categories = _mergeCategories([..._categories, created]);
       _notifySafely();
       return created.name;
@@ -1122,9 +1174,9 @@ class AutoImportViewModel extends ChangeNotifier {
     final updatedDrafts = _state.drafts
         .map(
           (draft) => _pathMatchesFolder(
-                draft.sourcePath,
-                normalizedFolder,
-              )
+            draft.sourcePath,
+            normalizedFolder,
+          )
               ? draft.copyWith(
                   assetAccountName: value.isEmpty ? null : value,
                 )

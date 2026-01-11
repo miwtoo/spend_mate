@@ -130,8 +130,7 @@ class _AutoImportScreenState extends State<AutoImportScreen>
   Future<AutoImportDraft?> _promptLinkTransaction(
     AutoImportDraft draft,
   ) async {
-    final selected = await showModalBottomSheet<
-        FireflyTransactionSummary>(
+    final selected = await showModalBottomSheet<FireflyTransactionSummary>(
       context: context,
       isScrollControlled: true,
       builder: (context) => _FindExistingTransactionSheet(
@@ -171,6 +170,9 @@ class _AutoImportScreenState extends State<AutoImportScreen>
             final theme = Theme.of(context);
             final failedCount = drafts
                 .where((draft) => draft.status == AutoImportStatus.failed)
+                .length;
+            final pendingCount = drafts
+                .where((draft) => draft.status == AutoImportStatus.pending)
                 .length;
             final queuedRetryIds = _vm.retryQueueIds.toSet();
             final folderPaths = _vm.folderPaths;
@@ -263,30 +265,29 @@ class _AutoImportScreenState extends State<AutoImportScreen>
                                     ),
                                     child: Builder(
                                       builder: (context) {
-                                        final selectedAsset = _vm
-                                            .assetAccountForFolder(
+                                        final selectedAsset =
+                                            _vm.assetAccountForFolder(
                                           folderPaths[index],
                                         );
-                                        final resolvedSelectedAsset = assetItems
-                                                .any((item) =>
-                                                    item.value ==
-                                                    selectedAsset)
-                                            ? selectedAsset
-                                            : null;
+                                        final resolvedSelectedAsset =
+                                            assetItems.any((item) =>
+                                                    item.value == selectedAsset)
+                                                ? selectedAsset
+                                                : null;
                                         return DropdownButtonFormField<String>(
                                           key: ValueKey(
                                             '${folderPaths[index]}-${resolvedSelectedAsset ?? ''}',
                                           ),
                                           initialValue: resolvedSelectedAsset,
                                           items: assetItems,
-                                          onChanged: _vm.isLoadingAssets ||
-                                                  !hasAssets
-                                              ? null
-                                              : (value) =>
-                                                  _vm.setFolderAssetAccount(
-                                                    folderPaths[index],
-                                                    value,
-                                                  ),
+                                          onChanged:
+                                              _vm.isLoadingAssets || !hasAssets
+                                                  ? null
+                                                  : (value) =>
+                                                      _vm.setFolderAssetAccount(
+                                                        folderPaths[index],
+                                                        value,
+                                                      ),
                                           decoration: InputDecoration(
                                             labelText: _vm.isLoadingAssets
                                                 ? 'Loading assets...'
@@ -362,11 +363,25 @@ class _AutoImportScreenState extends State<AutoImportScreen>
                       ),
                       Row(
                         children: [
+                          if (pendingCount > 0 || _vm.isSavingAll)
+                            TextButton.icon(
+                              onPressed: _vm.isSavingAll || _vm.isRetrying
+                                  ? null
+                                  : _vm.saveAllDrafts,
+                              icon: const Icon(Icons.save),
+                              label: Text(
+                                _vm.isSavingAll
+                                    ? 'Saving ${_vm.saveRemaining} left'
+                                    : 'Save All ($pendingCount)',
+                              ),
+                            ),
                           if (_vm.discardedDrafts.isNotEmpty)
                             TextButton.icon(
                               onPressed: _openDiscardedDrafts,
-                              icon: const Icon(Icons.restore_from_trash_outlined),
-                              label: Text('Restore (${_vm.discardedDrafts.length})'),
+                              icon:
+                                  const Icon(Icons.restore_from_trash_outlined),
+                              label: Text(
+                                  'Restore (${_vm.discardedDrafts.length})'),
                             ),
                           if (failedCount > 0 || _vm.isRetrying)
                             TextButton.icon(
@@ -399,9 +414,12 @@ class _AutoImportScreenState extends State<AutoImportScreen>
                       onConfirm: _vm.confirmDraft,
                       onDiscard: _vm.discardDraft,
                       onRetry: _vm.retryDraft,
-                      retryEnabled: !_vm.isRetrying,
+                      retryEnabled: !_vm.isRetrying && !_vm.isSavingAll,
                       activeRetryId: _vm.activeRetryId,
                       queuedRetryIds: queuedRetryIds,
+                      isSavingAll: _vm.isSavingAll,
+                      activeSaveId: _vm.activeSaveId,
+                      queuedSaveIds: _vm.saveQueueIds.toSet(),
                     ),
                   const SizedBox(height: 24),
                 ],
@@ -424,6 +442,9 @@ List<Widget> _buildDraftSections(
   required bool retryEnabled,
   required String? activeRetryId,
   required Set<String> queuedRetryIds,
+  required bool isSavingAll,
+  required String? activeSaveId,
+  required Set<String> queuedSaveIds,
 }) {
   final widgets = <Widget>[];
   final theme = Theme.of(context);
@@ -436,9 +457,8 @@ List<Widget> _buildDraftSections(
   final pendingDrafts = drafts
       .where((draft) => draft.status == AutoImportStatus.pending)
       .toList();
-  final failedDrafts = drafts
-      .where((draft) => draft.status == AutoImportStatus.failed)
-      .toList();
+  final failedDrafts =
+      drafts.where((draft) => draft.status == AutoImportStatus.failed).toList();
 
   // Sort each section by date/detectedAt (newest first)
   for (final sectionDrafts in [processingDrafts, pendingDrafts, failedDrafts]) {
@@ -480,6 +500,9 @@ List<Widget> _buildDraftSections(
       retryEnabled: retryEnabled,
       activeRetryId: activeRetryId,
       queuedRetryIds: queuedRetryIds,
+      isSavingAll: isSavingAll,
+      activeSaveId: activeSaveId,
+      queuedSaveIds: queuedSaveIds,
     ));
   }
 
@@ -497,6 +520,9 @@ List<Widget> _buildDraftSections(
       retryEnabled: retryEnabled,
       activeRetryId: activeRetryId,
       queuedRetryIds: queuedRetryIds,
+      isSavingAll: isSavingAll,
+      activeSaveId: activeSaveId,
+      queuedSaveIds: queuedSaveIds,
     ));
   }
 
@@ -514,6 +540,9 @@ List<Widget> _buildDraftSections(
       retryEnabled: retryEnabled,
       activeRetryId: activeRetryId,
       queuedRetryIds: queuedRetryIds,
+      isSavingAll: isSavingAll,
+      activeSaveId: activeSaveId,
+      queuedSaveIds: queuedSaveIds,
     ));
   }
 
@@ -531,6 +560,9 @@ List<Widget> _buildDraftCardsForSection(
   required bool retryEnabled,
   required String? activeRetryId,
   required Set<String> queuedRetryIds,
+  required bool isSavingAll,
+  required String? activeSaveId,
+  required Set<String> queuedSaveIds,
 }) {
   final widgets = <Widget>[];
   final datedDrafts = sectionDrafts
@@ -600,6 +632,9 @@ List<Widget> _buildDraftCardsForSection(
         retryEnabled: retryEnabled,
         activeRetryId: activeRetryId,
         queuedRetryIds: queuedRetryIds,
+        isSavingAll: isSavingAll,
+        activeSaveId: activeSaveId,
+        queuedSaveIds: queuedSaveIds,
       ),
     );
   }
@@ -629,6 +664,9 @@ List<Widget> _buildDraftCardsForSection(
           retryEnabled: retryEnabled,
           activeRetryId: activeRetryId,
           queuedRetryIds: queuedRetryIds,
+          isSavingAll: isSavingAll,
+          activeSaveId: activeSaveId,
+          queuedSaveIds: queuedSaveIds,
         ),
       );
     }
@@ -655,6 +693,9 @@ class _DraftCard extends StatelessWidget {
     required this.retryEnabled,
     required this.activeRetryId,
     required this.queuedRetryIds,
+    required this.isSavingAll,
+    required this.activeSaveId,
+    required this.queuedSaveIds,
   });
 
   final AutoImportDraft draft;
@@ -665,6 +706,9 @@ class _DraftCard extends StatelessWidget {
   final bool retryEnabled;
   final String? activeRetryId;
   final Set<String> queuedRetryIds;
+  final bool isSavingAll;
+  final String? activeSaveId;
+  final Set<String> queuedSaveIds;
 
   @override
   Widget build(BuildContext context) {
@@ -674,6 +718,8 @@ class _DraftCard extends StatelessWidget {
     final statusLabel = _statusLabel(draft.status);
     final isRetrying = draft.id == activeRetryId;
     final isQueued = !isRetrying && queuedRetryIds.contains(draft.id);
+    final isSaving = draft.id == activeSaveId;
+    final isSaveQueued = !isSaving && queuedSaveIds.contains(draft.id);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -769,6 +815,32 @@ class _DraftCard extends StatelessWidget {
                 ],
               ),
             ],
+            if (isSaving || isSaveQueued) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (isSaving)
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Icon(
+                      Icons.schedule,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isSaving ? 'Saving...' : 'Queued for saving',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -792,24 +864,26 @@ class _DraftCard extends StatelessWidget {
                   ),
                 if (draft.status == AutoImportStatus.pending)
                   FilledButton(
-                    onPressed: () => onReview(draft),
+                    onPressed: isSavingAll ? null : () => onReview(draft),
                     child: const Text('Review & Confirm'),
                   ),
                 if (draft.status == AutoImportStatus.confirmed)
                   OutlinedButton(
-                    onPressed: () => onReview(draft),
+                    onPressed: isSavingAll ? null : () => onReview(draft),
                     child: const Text('Edit'),
                   ),
                 if (draft.status == AutoImportStatus.pending ||
                     draft.status == AutoImportStatus.confirmed)
                   OutlinedButton.icon(
-                    onPressed: retryEnabled ? () => onRetry(draft) : null,
+                    onPressed: (retryEnabled && !isSavingAll)
+                        ? () => onRetry(draft)
+                        : null,
                     icon: const Icon(Icons.refresh),
                     label: const Text('Re-run OCR'),
                   ),
                 if (draft.status == AutoImportStatus.pending)
                   OutlinedButton(
-                    onPressed: () => onDiscard(draft.id),
+                    onPressed: isSavingAll ? null : () => onDiscard(draft.id),
                     child: const Text('Discard'),
                   ),
                 if (draft.status == AutoImportStatus.failed)
@@ -1416,9 +1490,8 @@ class _DraftEditSheetState extends State<_DraftEditSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isConfirmed = widget.initialStatus == AutoImportStatus.confirmed;
-    final title = isConfirmed
-        ? 'Edit submitted transaction'
-        : 'Review receipt draft';
+    final title =
+        isConfirmed ? 'Edit submitted transaction' : 'Review receipt draft';
     final confirmLabel = isConfirmed ? 'Save & Update' : 'Save & Confirm';
 
     return SafeArea(

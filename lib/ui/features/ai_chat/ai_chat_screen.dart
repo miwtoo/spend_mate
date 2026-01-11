@@ -223,8 +223,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         if (_vm.isSending && index == 0) {
                           return const _TypingIndicator();
                         }
-                        final msgIndex =
-                            visible.length - 1 - (index - (_vm.isSending ? 1 : 0));
+                        final msgIndex = visible.length -
+                            1 -
+                            (index - (_vm.isSending ? 1 : 0));
                         final message = visible[msgIndex];
                         return _ChatBubble(message: message);
                       },
@@ -249,8 +250,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                             children: [
                               IconButton(
                                 tooltip: 'Add image',
-                                onPressed:
-                                    _vm.isSending ? null : _openImagePickerSheet,
+                                onPressed: _vm.isSending
+                                    ? null
+                                    : _openImagePickerSheet,
                                 icon: const Icon(Icons.image_outlined),
                               ),
                               IconButton(

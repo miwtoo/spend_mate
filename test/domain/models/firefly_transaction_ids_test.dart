@@ -6,7 +6,8 @@ void main() {
     test('hasAny reflects presence of ids', () {
       const empty = FireflyTransactionIds();
       const withTransaction = FireflyTransactionIds(transactionId: 'tx');
-      const withJournal = FireflyTransactionIds(transactionJournalId: 'journal');
+      const withJournal =
+          FireflyTransactionIds(transactionJournalId: 'journal');
 
       expect(empty.hasAny, isFalse);
       expect(withTransaction.hasAny, isTrue);

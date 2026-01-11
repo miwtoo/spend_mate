@@ -15,7 +15,8 @@ class FireflyConfig {
   final String transferDestinationAccountName;
   final String defaultCurrencyCode;
 
-  bool get hasCredentials => baseUrl.trim().isNotEmpty && apiToken.trim().isNotEmpty;
+  bool get hasCredentials =>
+      baseUrl.trim().isNotEmpty && apiToken.trim().isNotEmpty;
 
   bool get isConfigured => hasCredentials;
 

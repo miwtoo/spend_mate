@@ -3,7 +3,8 @@ import 'package:spend_mate/domain/models/auto_import_draft.dart';
 
 void main() {
   group('Auto Import Draft Sections', () {
-    test('should separate drafts into Processing, Pending, and Failed sections', () {
+    test('should separate drafts into Processing, Pending, and Failed sections',
+        () {
       // Create test drafts with different statuses
       final allDrafts = [
         _createDraft('1', AutoImportStatus.processing),
@@ -45,10 +46,13 @@ void main() {
     test('should sort drafts by date within each section, newest first', () {
       final now = DateTime.now();
       final drafts = [
-        _createDraftWithDate('1', AutoImportStatus.pending, now.subtract(const Duration(days: 3))),
-        _createDraftWithDate('2', AutoImportStatus.pending, now.subtract(const Duration(days: 1))),
+        _createDraftWithDate('1', AutoImportStatus.pending,
+            now.subtract(const Duration(days: 3))),
+        _createDraftWithDate('2', AutoImportStatus.pending,
+            now.subtract(const Duration(days: 1))),
         _createDraftWithDate('3', AutoImportStatus.pending, now),
-        _createDraftWithDate('4', AutoImportStatus.pending, now.subtract(const Duration(days: 2))),
+        _createDraftWithDate('4', AutoImportStatus.pending,
+            now.subtract(const Duration(days: 2))),
       ];
 
       // Sort by date descending (newest first)
@@ -112,7 +116,8 @@ AutoImportDraft _createDraft(String id, AutoImportStatus status) {
   );
 }
 
-AutoImportDraft _createDraftWithDate(String id, AutoImportStatus status, DateTime date) {
+AutoImportDraft _createDraftWithDate(
+    String id, AutoImportStatus status, DateTime date) {
   return AutoImportDraft(
     id: id,
     sourcePath: '/test/path$id.jpg',

@@ -400,7 +400,8 @@ class FireflyApiService {
         ? attributes['name']?.toString() ?? ''
         : '';
     if (name.trim().isEmpty) return null;
-    return FireflyCategory(id: id.isEmpty ? name.trim() : id, name: name.trim());
+    return FireflyCategory(
+        id: id.isEmpty ? name.trim() : id, name: name.trim());
   }
 
   FireflyTransactionIds _parseTransactionIds(
@@ -434,7 +435,8 @@ class FireflyApiService {
     if (data is Map) {
       transactionId = data['id']?.toString();
       final attributes = data['attributes'];
-      final transactions = attributes is Map ? attributes['transactions'] : null;
+      final transactions =
+          attributes is Map ? attributes['transactions'] : null;
       final firstSplit = _firstListEntry(transactions);
       if (firstSplit is Map) {
         journalId = firstSplit['transaction_journal_id']?.toString() ??
@@ -501,8 +503,7 @@ class FireflyApiService {
         if (date == null) continue;
         final type = split['type']?.toString() ?? '';
         final sourceName = split['source_name']?.toString() ?? '';
-        final destinationName =
-            split['destination_name']?.toString() ?? '';
+        final destinationName = split['destination_name']?.toString() ?? '';
         final currencyCode = split['currency_code']?.toString();
 
         summaries.add(

@@ -4,7 +4,9 @@ import 'package:spend_mate/data/repositories/firefly_transaction_repository.dart
 void main() {
   group('FireflyTransactionRepository', () {
     group('fetchAllTransactions', () {
-      test('should have method that returns all transactions from wide date range', () {
+      test(
+          'should have method that returns all transactions from wide date range',
+          () {
         // This is a compilation test to ensure the method exists
         // The actual implementation will need to:
         // 1. Start from 1970-01-01

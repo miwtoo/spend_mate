@@ -9,7 +9,8 @@ import 'package:spend_mate/ui/features/ai_chat/models/chat_attachment.dart';
 import 'package:spend_mate/ui/features/ai_chat/models/chat_message.dart';
 
 void main() {
-  test('calls OpenAI-compatible /v1/chat/completions and parses reply', () async {
+  test('calls OpenAI-compatible /v1/chat/completions and parses reply',
+      () async {
     late http.Request captured;
 
     final mock = MockClient((request) async {
@@ -50,7 +51,8 @@ void main() {
     expect(body['messages'], isA<List>());
   });
 
-  test('when baseUrl already ends with /v1, calls /v1/chat/completions', () async {
+  test('when baseUrl already ends with /v1, calls /v1/chat/completions',
+      () async {
     late http.Request captured;
 
     final mock = MockClient((request) async {
@@ -82,10 +84,12 @@ void main() {
     );
 
     expect(reply, 'OK');
-    expect(captured.url.toString(), 'https://example.com/api/v1/chat/completions');
+    expect(
+        captured.url.toString(), 'https://example.com/api/v1/chat/completions');
   });
 
-  test('supports Z.ai-style baseUrl ending with /v4 (appends chat/completions)', () async {
+  test('supports Z.ai-style baseUrl ending with /v4 (appends chat/completions)',
+      () async {
     late http.Request captured;
 
     final mock = MockClient((request) async {
@@ -123,7 +127,8 @@ void main() {
     );
   });
 
-  test('non-JSON error body surfaces helpful exception (includes URL + status)', () async {
+  test('non-JSON error body surfaces helpful exception (includes URL + status)',
+      () async {
     final mock = MockClient((request) async {
       return http.Response('<html>not found</html>', 404);
     });
@@ -153,7 +158,8 @@ void main() {
     );
   });
 
-  test('sends attachments as multipart content for OpenAI-compatible APIs', () async {
+  test('sends attachments as multipart content for OpenAI-compatible APIs',
+      () async {
     late http.Request captured;
 
     final mock = MockClient((request) async {

@@ -39,4 +39,3 @@ class ChatMessage {
   final List<ChatAttachment> attachments;
   final DateTime createdAt;
 }
-

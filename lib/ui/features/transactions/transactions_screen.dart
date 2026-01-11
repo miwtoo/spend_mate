@@ -102,7 +102,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                               children: [
                                 FilledButton.icon(
                                   onPressed: () => _openAutoImport(context),
-                                  icon: const Icon(Icons.auto_awesome_motion_outlined),
+                                  icon: const Icon(
+                                      Icons.auto_awesome_motion_outlined),
                                   label: const Text('Auto Import'),
                                 ),
                                 OutlinedButton.icon(
@@ -153,7 +154,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                               children: [
                                 FilledButton.icon(
                                   onPressed: () => _openAutoImport(context),
-                                  icon: const Icon(Icons.auto_awesome_motion_outlined),
+                                  icon: const Icon(
+                                      Icons.auto_awesome_motion_outlined),
                                   label: const Text('Auto Import'),
                                 ),
                                 OutlinedButton.icon(
@@ -216,14 +218,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  List<Widget> _buildTransactionList(BuildContext context, List<FireflyTransactionSummary> transactions) {
+  List<Widget> _buildTransactionList(
+      BuildContext context, List<FireflyTransactionSummary> transactions) {
     final widgets = <Widget>[];
     DateTime? currentMonth;
     final theme = Theme.of(context);
 
     for (final transaction in transactions) {
       final monthKey = DateTime(transaction.date.year, transaction.date.month);
-      final monthChanged = currentMonth == null || !_sameMonth(currentMonth, monthKey);
+      final monthChanged =
+          currentMonth == null || !_sameMonth(currentMonth, monthKey);
 
       if (monthChanged) {
         if (currentMonth != null) {
@@ -251,8 +255,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   String _formatMonthYear(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
@@ -269,7 +283,8 @@ class _TransactionCard extends StatelessWidget {
     final localizations = MaterialLocalizations.of(context);
 
     final dateLabel = localizations.formatShortDate(transaction.date);
-    final amountLabel = _formatAmount(transaction.amount, transaction.currencyCode);
+    final amountLabel =
+        _formatAmount(transaction.amount, transaction.currencyCode);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

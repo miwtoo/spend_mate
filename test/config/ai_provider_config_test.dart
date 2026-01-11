@@ -10,7 +10,8 @@ void main() {
       expect(AiProvider.openAiCompatible.storedValue, 'openai_compatible');
       expect(AiProvider.gemini.storedValue, 'gemini');
       expect(AiProviderX.fromStoredValue('gemini'), AiProvider.gemini);
-      expect(AiProviderX.fromStoredValue('unknown'), AiProvider.openAiCompatible);
+      expect(
+          AiProviderX.fromStoredValue('unknown'), AiProvider.openAiCompatible);
     });
   });
 

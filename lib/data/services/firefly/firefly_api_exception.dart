@@ -51,8 +51,7 @@ class FireflyApiException implements Exception {
       method: method,
       uri: uri,
       statusCode: statusCode,
-      message:
-          'Firefly III returned an unexpected response. Please try again.',
+      message: 'Firefly III returned an unexpected response. Please try again.',
       responseSnippet: responseSnippet,
       contentType: contentType,
       isJson: isJson,
@@ -87,7 +86,8 @@ class FireflyApiException implements Exception {
       method: method,
       uri: uri,
       statusCode: 401,
-      message: 'Authentication failed. Please check your Firefly III API token.',
+      message:
+          'Authentication failed. Please check your Firefly III API token.',
       responseSnippet: responseSnippet,
       contentType: contentType,
       isJson: false,
@@ -104,16 +104,19 @@ class FireflyApiException implements Exception {
     final String message;
     switch (statusCode) {
       case 502:
-        message = 'Firefly III server is unreachable. This is usually a temporary issue. Please try again.';
+        message =
+            'Firefly III server is unreachable. This is usually a temporary issue. Please try again.';
         break;
       case 503:
-        message = 'Firefly III server is temporarily unavailable. Please try again in a moment.';
+        message =
+            'Firefly III server is temporarily unavailable. Please try again in a moment.';
         break;
       case 504:
         message = 'Firefly III server timed out. Please try again.';
         break;
       default:
-        message = 'Firefly III returned an error (HTTP $statusCode). Please try again.';
+        message =
+            'Firefly III returned an error (HTTP $statusCode). Please try again.';
     }
 
     return FireflyApiException._(

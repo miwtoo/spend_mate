@@ -17,8 +17,7 @@ class FireflyTransactionIds {
   }) {
     return FireflyTransactionIds(
       transactionId: transactionId ?? this.transactionId,
-      transactionJournalId:
-          transactionJournalId ?? this.transactionJournalId,
+      transactionJournalId: transactionJournalId ?? this.transactionJournalId,
     );
   }
 }

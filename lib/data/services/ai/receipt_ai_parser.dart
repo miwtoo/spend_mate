@@ -76,8 +76,7 @@ const _systemPrompt =
     'You are a receipt and transaction parser. Return ONLY valid JSON. '
     'Do not include markdown or explanations.';
 
-const _userPrompt =
-    'Extract receipt fields as JSON with keys: '
+const _userPrompt = 'Extract receipt fields as JSON with keys: '
     'amount (number), currency (3-letter code or symbol), '
     'date (YYYY-MM-DD), time (HH:mm or h:mm a, optional), '
     'date_time (ISO 8601 date-time, optional), '

@@ -209,7 +209,8 @@ class FireflyTransactionRepository {
     return switch (type) {
       ReceiptTransactionType.income => FireflyTransactionType.deposit,
       ReceiptTransactionType.transfer => FireflyTransactionType.transfer,
-      ReceiptTransactionType.expense || ReceiptTransactionType.unknown =>
+      ReceiptTransactionType.expense ||
+      ReceiptTransactionType.unknown =>
         FireflyTransactionType.withdrawal,
     };
   }
@@ -262,8 +263,7 @@ class FireflyTransactionRepository {
     FireflyConfig config,
     String? assetAccountOverride,
   ) {
-    final configuredDestination =
-        config.transferDestinationAccountName.trim();
+    final configuredDestination = config.transferDestinationAccountName.trim();
     if (configuredDestination.isNotEmpty) {
       return (
         source: _requireAssetAccount(assetAccountOverride),

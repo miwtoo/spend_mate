@@ -41,4 +41,3 @@ void main() {
     expect(loaded.visionModel, config.visionModel);
   });
 }
-

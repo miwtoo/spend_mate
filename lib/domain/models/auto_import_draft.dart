@@ -69,8 +69,7 @@ class AutoImportDraft {
       detectedAt: detectedAt,
       status: status ?? this.status,
       sourceHash: sourceHash ?? this.sourceHash,
-      fireflyTransactionId:
-          fireflyTransactionId ?? this.fireflyTransactionId,
+      fireflyTransactionId: fireflyTransactionId ?? this.fireflyTransactionId,
       fireflyTransactionJournalId:
           fireflyTransactionJournalId ?? this.fireflyTransactionJournalId,
       merchant: merchant ?? this.merchant,

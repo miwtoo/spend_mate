@@ -22,7 +22,8 @@ void main() {
       model: 'model',
       visionModel: 'model',
     );
-    final httpClient = MockClient((request) async => throw StateError('unused'));
+    final httpClient =
+        MockClient((request) async => throw StateError('unused'));
 
     final openAi = AiChatClientFactory.fromConfig(
       config: openAiConfig,
